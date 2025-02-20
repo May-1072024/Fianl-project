@@ -20,7 +20,7 @@ const Navbar = () => {
       <div className="flex items-center gap-2 mt-4">
         <p className="bg-white text-black px-4 py-1 rounded-2xl cursor-pointer">All</p>
         <p className="bg-black px-4 py-1 rounded-2xl cursor-pointer hidden md:block">Music</p>
-        <p className="bg-black px-4 py-1 rounded-2xl cursor-pointer hidden md:block">Poadcast</p>
+
         <p onClick={()=> navigate("/playlist")} className="bg-black px-4 py-1 rounded-2xl cursor-pointer md:hidden">Playlist</p>
         
       </div>
