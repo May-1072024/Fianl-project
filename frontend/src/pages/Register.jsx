@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { UserData } from '../context/User.jsx';
 import { SongData } from '../context/Song.jsx';
+import { toast } from 'react-toastify';
+
 
 const Register = () => {
     const [email, setEmail] = useState("");
@@ -15,14 +17,29 @@ const Register = () => {
 
     const submitHandler = (e) => {
         e.preventDefault();
-        registerUser(name, email, password, navigate, fetchSongs, fetchAlbums);
+        registerUser(name, email, password, navigate, fetchSongs, fetchAlbums)
+            .then((response) => {
+                if (response) {
+                    toast.info('A verification email has been sent. Please check your inbox.');
+                }
+            })
+            .catch((error) => {
+                toast.error(error.message || 'Registration failed');
+            });
     }
+
 
     return <div className='flex items-center justify-center h-screen max-h-screen '>
         <div className="bg-black text-white p-8 rounded-lg shadow-md max-w-md w-full ">
             <h2 className="text-3xl font-semibold text-center mb-8">Register to Timeless</h2>
 
             <form onSubmit={submitHandler} className='mt-8'>
+                <div className="mb-4 text-center">
+                    <p className="text-sm text-gray-400">
+                        We'll send a verification email to confirm your account
+                    </p>
+                </div>
+
 
                 <div className="mb-4">
                     <label className="block text-sm font-medium mb-1">Name</label>

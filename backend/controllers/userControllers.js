@@ -2,6 +2,8 @@ import { User } from "../models/User.js";
 import generateToken from "../utills/generateToken.js";
 import TryCatch from "../utills/TryCatch.js";
 import bcrypt from "bcrypt";
+import { sendVerificationEmail } from "../utills/email.js";
+
 
 export const registerUser = TryCatch(async(req,res)=>{
     const { name, email, password } = req.body;
@@ -19,11 +21,19 @@ export const registerUser = TryCatch(async(req,res)=>{
         email,
         password: hashPassword,
     });
+    
+    // Generate and send verification email
+    user.generateVerificationToken();
+    await user.save();
+    const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${user.verificationToken}`;
+    await sendVerificationEmail(user.email, verificationLink);
+
     generateToken(user._id, res);
     res.status(201).json({
         user,
-        message: "User Created Successfully",
+        message: "User Created Successfully. Please check your email to verify your account.",
     });
+
 });
 
 export const loginUser = TryCatch(async(req,res)=>{
@@ -42,12 +52,21 @@ export const loginUser = TryCatch(async(req,res)=>{
          message: "Wrong Password",
     });
 
+    // Send verification email if not verified
+    if (!user.isVerified) {
+        user.generateVerificationToken();
+        await user.save();
+        const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${user.verificationToken}`;
+        await sendVerificationEmail(user.email, verificationLink);
+    }
+
     generateToken(user._id, res);
     
     res.status(200).json({
         user,
-        message: "User LoggedIN",
+        message: user.isVerified ? "User LoggedIN" : "Please check your email to verify your account.",
     });
+
 });
 
 export const myProfile = TryCatch(async(req,res)=>{
@@ -55,7 +74,23 @@ export const myProfile = TryCatch(async(req,res)=>{
     res.json(user);
 })
 
+export const verifyEmail = TryCatch(async(req,res)=>{
+    const { token } = req.query;
+    
+    const user = await User.findOne({ verificationToken: token });
+    if (!user) {
+        return res.status(400).json({ message: "Invalid verification token" });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Email verified successfully" });
+});
+
 export const logoutUser = TryCatch(async(req,res)=>{
+
     res.cookie("token", "", { maxAge: 0 });
     res.json({
         message: "User Logout Successfully",
