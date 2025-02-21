@@ -3,29 +3,50 @@ import generateToken from "../utills/generateToken.js";
 import TryCatch from "../utills/TryCatch.js";
 import bcrypt from "bcrypt";
 import { sendVerificationEmail } from "../utills/email.js";
-
+import crypto from "crypto";
 
 export const registerUser = TryCatch(async(req,res)=>{
     const { name, email, password } = req.body;
-    let user = await User.findOne({email});
-
-    if(user)
+    // Case-insensitive email search and validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
         return res.status(400).json({
-         message: "User Already Exist",
-    });
+            message: "Invalid email format"
+        });
+    }
+
+    let user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
+
+    if (user) {
+        return res.status(400).json({
+            message: "User with this email already exists"
+        });
+    }
+
+
+    // Validate password length
+    if (password.length < 8) {
+        return res.status(400).json({
+            message: "Password must be at least 8 characters long"
+        });
+    }
 
     const hashPassword = await bcrypt.hash(password, 10);
 
+    // Create user with initial verification token
     user = await User.create({
-        name,
-        email,
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
         password: hashPassword,
+        verificationToken: crypto.randomBytes(20).toString('hex')
     });
-    
+
     // Generate and send verification email
-    user.generateVerificationToken();
-    await user.save();
+
     const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${user.verificationToken}`;
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        throw new Error('Email configuration is missing');
+    }
     await sendVerificationEmail(user.email, verificationLink);
 
     generateToken(user._id, res);
@@ -54,9 +75,16 @@ export const loginUser = TryCatch(async(req,res)=>{
 
     // Send verification email if not verified
     if (!user.isVerified) {
-        user.generateVerificationToken();
-        await user.save();
+        // Generate new token if needed
+        if (!user.verificationToken) {
+            user.verificationToken = crypto.randomBytes(20).toString('hex');
+            await user.save();
+        }
+
         const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${user.verificationToken}`;
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+            throw new Error('Email configuration is missing');
+        }
         await sendVerificationEmail(user.email, verificationLink);
     }
 
