@@ -1,7 +1,7 @@
 import { User } from "../models/User.js";
-import TryCatch from "../utils/TryCatch.js";
+import TryCatch from "../utills/TryCatch.js";
 import bcrypt from "bcrypt";
-import generateToken from "../utils/generateToken.js";
+import generateToken from "../utills/generateToken.js";
 
 export const registerUser = TryCatch(async (req, res) => {
   const { name, email, password } = req.body;
