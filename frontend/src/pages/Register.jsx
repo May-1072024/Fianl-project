@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { UserData } from '../context/User.jsx';
 import { SongData } from '../context/Song.jsx';
 import { toast } from 'react-toastify';
+import { sendVerificationEmail } from '../../backend/utills/email.js';
+
 
 
 const Register = () => {
@@ -20,9 +22,17 @@ const Register = () => {
         registerUser(name, email, password, navigate, fetchSongs, fetchAlbums)
             .then((response) => {
                 if (response) {
-                    toast.info('A verification email has been sent. Please check your inbox.');
+                    const verificationLink = `${window.location.origin}/verify-email?token=${response.user.verificationToken}`;
+                    sendVerificationEmail(response.user.email, verificationLink)
+                        .then(() => {
+                            toast.info('A verification email has been sent. Please check your inbox.');
+                        })
+                        .catch((error) => {
+                            toast.error('Failed to send verification email. Please try again later.');
+                        });
                 }
             })
+
             .catch((error) => {
                 toast.error(error.message || 'Registration failed');
             });
